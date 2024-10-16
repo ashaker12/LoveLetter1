@@ -3,8 +3,8 @@ import java.net.*;
 
 public class ChatClient {
     public static void main(String[] args) {
-        // Try to establish a connection to the server
-        try (Socket socket = new Socket("localhost", 12345);  // Connect to the server running on localhost at port 12345
+       
+        try (Socket socket = new Socket("localhost", 12345); 
              BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));  // Input stream to receive messages from the server
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);  // Output stream to send messages to the server
              BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {  // Input from the console (user input)

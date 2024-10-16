@@ -1,7 +1,7 @@
-import java.io.*;  // For input/output
-import java.net.*; // For networking classes (ServerSocket, Socket)
-import java.util.ArrayList;  // For storing multiple clients
-import java.util.List;  // List interface for managing clients
+import java.io.*;  
+import java.net.*;
+import java.util.ArrayList; 
+import java.util.List;  
 
 public class ChatServer {
     // List to store all connected clients (ClientHandler objects)
@@ -14,7 +14,6 @@ public class ChatServer {
         System.out.println("Server started...");
 
         while (true) {
-            // Accept incoming client connection and create a socket
             Socket clientSocket = serverSocket.accept();
             
             // Create a new ClientHandler for the connected client
@@ -36,15 +35,21 @@ public class ChatServer {
             }
         }
     }
-
+    
+    /*public static void broadcast(String message, ClientHandler sender) { // Updated
+        System.out.println("Broadcasting message: " + message); // New log for debugging
+        for (ClientHandler client : clients) {
+            client.sendMessage(message);  // Now sends message to all clients, including the sender
+        }
+    }
+*/
     // Nested class to handle each connected client
     static class ClientHandler implements Runnable {
         private Socket socket;  // Client socket
         private PrintWriter out;  // Output stream to send messages to the client
         private BufferedReader in;  // Input stream to receive messages from the client
-        private String name;  // Name of the client
+        private String name;  
 
-        // Constructor that initializes the client socket
         public ClientHandler(Socket socket) {
             this.socket = socket;
         }
@@ -52,19 +57,20 @@ public class ChatServer {
         @Override
         public void run() {
             try {
+
                 // Initialize input and output streams
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
                 
                 while(true){
-                // Ask the client for their name
+                
                 out.println("Enter your name:");
                 name = in.readLine();
 
                 synchronized (clientNames) {
                         if (name == null || name.isEmpty()) {
                             out.println("Invalid name. Please choose another.");
-                        } else if (clientNames.contains(name)) {
+                        } if (clientNames.contains(name)) {
                             out.println("Name already in use. Please choose another.");
                         } else {
                             clientNames.add(name); // Add the name to the list of client names
@@ -73,23 +79,42 @@ public class ChatServer {
                     }
                 }
 
+                /*while (true) {
+                    out.println("Enter your name:");
+                    name = in.readLine();
+                    System.out.println("Client attempting to use name: " + name);  // New log for debugging
+
+                    // Synchronized block to ensure thread-safe name checking
+                    synchronized (clientNames) {  // This ensures no duplicate names across threads
+                        if (name == null || name.isEmpty()) {
+                            out.println("Invalid name. Please choose another.");
+                            System.out.println("Client provided an invalid name.");  // New log for debugging
+                        } else if (clientNames.contains(name)) {
+                            out.println("Name already in use. Please choose another.");
+                            System.out.println("Client attempted to use a duplicate name: " + name);  // New log for debugging
+                        } else {
+                            clientNames.add(name); // Add the name to the list of client names
+                            System.out.println("Client name accepted: " + name);  // New log for debugging
+                            break;  // Exit the loop if the name is valid and unique
+                        }
+                    }
+                }
+
+
                 out.println("Welcome, " + name + "!");
-            
+            */
                 // Notify all clients that a new client has joined
                 ChatServer.broadcast(name + " joined the room", this);
 
                 // Continuously read messages from the client and broadcast them to others
                 String message;
                 while ((message = in.readLine()) != null) {
-                    // If the client types "bye", break the loop and disconnect
                     if ("bye".equalsIgnoreCase(message)) {
                         break;
                     }
-                    // Broadcast the received message to all other clients
                     ChatServer.broadcast(name + ": " + message, this);
                 }
 
-                // Notify others when the client leaves the room
                 ChatServer.broadcast(name + " left the room", this);
                 socket.close();  // Close the connection after the client leaves
             } catch (IOException e) {
