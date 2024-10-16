@@ -6,13 +6,13 @@ import java.util.List;  // List interface for managing clients
 public class ChatServer {
     // List to store all connected clients (ClientHandler objects)
     private static List<ClientHandler> clients = new ArrayList<>();
+    private static List<String> clientNames = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         // Create a ServerSocket that listens on port 12345
         ServerSocket serverSocket = new ServerSocket(12345);
         System.out.println("Server started...");
 
-        // Continuously accept new clients
         while (true) {
             // Accept incoming client connection and create a socket
             Socket clientSocket = serverSocket.accept();
@@ -31,7 +31,6 @@ public class ChatServer {
     // Broadcast a message to all connected clients except the sender
     public static void broadcast(String message, ClientHandler sender) {
         for (ClientHandler client : clients) {
-            // Send the message to all clients except the one who sent it
             if (client != sender) {
                 client.sendMessage(message);
             }
@@ -57,10 +56,25 @@ public class ChatServer {
                 in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
                 
+                while(true){
                 // Ask the client for their name
                 out.println("Enter your name:");
                 name = in.readLine();
-                
+
+                synchronized (clientNames) {
+                        if (name == null || name.isEmpty()) {
+                            out.println("Invalid name. Please choose another.");
+                        } else if (clientNames.contains(name)) {
+                            out.println("Name already in use. Please choose another.");
+                        } else {
+                            clientNames.add(name); // Add the name to the list of client names
+                            break;
+                        }
+                    }
+                }
+
+                out.println("Welcome, " + name + "!");
+            
                 // Notify all clients that a new client has joined
                 ChatServer.broadcast(name + " joined the room", this);
 
