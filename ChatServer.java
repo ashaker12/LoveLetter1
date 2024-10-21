@@ -9,14 +9,14 @@ public class ChatServer {
     private static List<String> clientNames = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        // Create a ServerSocket that listens on port 12345
+        //a ServerSocket that listens on port 12345
         ServerSocket serverSocket = new ServerSocket(12345);
         System.out.println("Server started...");
 
         while (true) {
             Socket clientSocket = serverSocket.accept();
             
-            // Create a new ClientHandler for the connected client
+            //a new ClientHandler for the connected client
             ClientHandler clientHandler = new ClientHandler(clientSocket);
             
             // Add the new client to the list of clients
@@ -79,12 +79,11 @@ public class ChatServer {
                     }
                 }
 
-                /*while (true) {
+                while (true) {
                     out.println("Enter your name:");
                     name = in.readLine();
                     System.out.println("Client attempting to use name: " + name);  // New log for debugging
 
-                    // Synchronized block to ensure thread-safe name checking
                     synchronized (clientNames) {  // This ensures no duplicate names across threads
                         if (name == null || name.isEmpty()) {
                             out.println("Invalid name. Please choose another.");
@@ -102,7 +101,7 @@ public class ChatServer {
 
 
                 out.println("Welcome, " + name + "!");
-            */
+            
                 // Notify all clients that a new client has joined
                 ChatServer.broadcast(name + " joined the room", this);
 
@@ -127,4 +126,4 @@ public class ChatServer {
             out.println(message);
         }
     }
-}
+} 
