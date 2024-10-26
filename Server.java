@@ -3,10 +3,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import static java.lang.System.out;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -15,7 +15,9 @@ public class Server implements Runnable {
     private ArrayList<ConnectionHandler> connections;
     private ServerSocket server;
     private boolean done;
-    private ExecutorService threadpool;//so we dont need a new thread everytime (reuses)
+    private PrintWriter out;
+    private ExecutorService threadpool; //so we dont need a new thread everytime (reuses)
+    private static List<String> clientNames = new ArrayList<>(); //List with all names already in use 
 
     public Server(){
         connections = new ArrayList<>();
@@ -26,7 +28,7 @@ public class Server implements Runnable {
     public void run(){
          try {
              server = new ServerSocket(9999);
-             threadpool = Executors.newCachedThreadPool();
+             threadpool = Executors.newCachedThreadPool(); //creates as many threads as possible 
 
              while(!done){
                 Socket client = server.accept();
@@ -41,10 +43,9 @@ public class Server implements Runnable {
 
     }
     
-    public void sendMessage(String message){
-
-        out.println(message); //this is a function that prints a message now we need a function to broadcast it to all 
-    }
+    public void sendMessage(String message) {
+            out.println(message);
+        }
 
     public void broadcast(String message){
         for (ConnectionHandler ch : connections){
@@ -53,10 +54,8 @@ public class Server implements Runnable {
             }
         }
     }
-    
 
-
-    public void quit(){//function to shut down the server
+    public void quit(){ //function to shut down the server
         try{
         done = true;
         if (!server.isClosed()){
@@ -65,7 +64,7 @@ public class Server implements Runnable {
         for (ConnectionHandler ch : connections){
             ch.quit();
         }
-        }catch(IOException e){
+        }catch(Exception e){
 
         }
     }
@@ -80,27 +79,42 @@ public class Server implements Runnable {
         public ConnectionHandler(Socket client){
             this.client = client;
         }
-        
+
         @Override
         public void run() {
             try {
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 
-                out.println("Enter your Name:");
 
-                name = in.readLine();
-                //here code should read the name still didnt check if theres one like it using if
+                while (true) {
+                    System.out.println("Server Started...");
+                   out.println("Enter your Name:");
 
-                System.out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
-                broadcast(name + "joined the room");
+                    name = in.readLine();
+                 //here code should read the name still didnt check if theres one like it using if
+
+                 if (name == null || name.isEmpty()) {
+                            out.println("Invalid name. Please choose another.");
+                        } if (clientNames.contains(name)) {
+                            out.println("Name already in use. Please choose another.");
+                             } else {
+                                clientNames.add(name);
+                                break; // Add the name to the list of client names
+                                }
+                }
+
+               out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
+                broadcast(name + " joined the room");
                 
                 String message;
                 while ((message = in.readLine()) !=null){
-                   if(message.startsWith("/quit")) {
+                   if(message.startsWith("bye")) {
                     broadcast(name + " left the Chat!");
                     quit();
-                   }else{
+                   } else if (message.startsWith("/dm")) {
+                    handleDirectMessage(message);  // Handle direct message
+                    }else{
                     broadcast(name + ": " + message);
                    }
                 }
@@ -108,11 +122,11 @@ public class Server implements Runnable {
                     quit();
             }
         }
-
         public void quit(){
             try{
                 in.close();
                 out.close();
+                clientNames.remove(name); //removes client from the Arraylist when he quits, do i have to write name.ch or smth or is that enough
             if (!client.isClosed()){
                 client.close();
                 }
@@ -121,9 +135,33 @@ public class Server implements Runnable {
             }
     }
 
+    public void handleDirectMessage(String message) {
+            String[] splitMessage = message.split(" ", 3);
+             if (splitMessage.length < 3) {
+        out.println("Invalid DM format. /dm name message");
+        return;
+    }
+    String recipientName = splitMessage[2];
+    String dmMessage = splitMessage[3];
+    boolean recipientFound = false;
+
+    for (ConnectionHandler ch : connections) {
+        if(ch != null && ch.name.equals(recipientName)){
+             ch.out.println("[DM from " + name + "]: " + dmMessage);
+             recipientFound = true;
+            break;
+        }
+        }
+    if (!recipientFound) {
+        out.println("User " + recipientName + " not found.");
+    }
+
  }
-    public static void main(String[] args){
+    }
+
+public static void main(String[] args){
         Server server = new Server(); 
         server.run();
     }
+
 }
