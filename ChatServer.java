@@ -36,14 +36,7 @@ public class ChatServer {
         }
     }
     
-    /*public static void broadcast(String message, ClientHandler sender) { // Updated
-        System.out.println("Broadcasting message: " + message); // New log for debugging
-        for (ClientHandler client : clients) {
-            client.sendMessage(message);  // Now sends message to all clients, including the sender
-        }
-    }
-*/
-    // Nested class to handle each connected client
+    // class to handle each connected client
     static class ClientHandler implements Runnable {
         private Socket socket;  // Client socket
         private PrintWriter out;  // Output stream to send messages to the client
@@ -79,26 +72,6 @@ public class ChatServer {
                     }
                 }
 
-                while (true) {
-                    out.println("Enter your name:");
-                    name = in.readLine();
-                    System.out.println("Client attempting to use name: " + name);  // New log for debugging
-
-                    synchronized (clientNames) {  // This ensures no duplicate names across threads
-                        if (name == null || name.isEmpty()) {
-                            out.println("Invalid name. Please choose another.");
-                            System.out.println("Client provided an invalid name.");  // New log for debugging
-                        } else if (clientNames.contains(name)) {
-                            out.println("Name already in use. Please choose another.");
-                            System.out.println("Client attempted to use a duplicate name: " + name);  // New log for debugging
-                        } else {
-                            clientNames.add(name); // Add the name to the list of client names
-                            System.out.println("Client name accepted: " + name);  // New log for debugging
-                            break;  // Exit the loop if the name is valid and unique
-                        }
-                    }
-                }
-
 
                 out.println("Welcome, " + name + "!");
             
@@ -108,7 +81,7 @@ public class ChatServer {
                 // Continuously read messages from the client and broadcast them to others
                 String message;
                 while ((message = in.readLine()) != null) {
-                    if ("bye".equalsIgnoreCase(message)) {
+                    if ("quit".equalsIgnoreCase(message)) {
                         break;
                     }
                     ChatServer.broadcast(name + ": " + message, this);
