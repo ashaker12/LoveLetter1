@@ -17,6 +17,8 @@ public class Server implements Runnable {
     private PrintWriter out;
     private ExecutorService threadpool; //so we dont need a new thread everytime (reuses)
     private ArrayList<String> clientNames = new ArrayList<>(); //List with all names already in use 
+    private final int MIN_PLAYERS = 2;
+    private final int MAX_PLAYERS = 4;
 
     public Server(){
         connections = new ArrayList<>();
@@ -31,9 +33,15 @@ public class Server implements Runnable {
 
              while(!done){
                 Socket client = server.accept();
+                if (connections.size() < MAX_PLAYERS) {
                 ConnectionHandler handler = new ConnectionHandler(client);
                 connections.add(handler);
                 threadpool.execute(handler);
+                } else {
+                    PrintWriter ChatFull = new PrintWriter(client.getOutputStream(), true);
+                    ChatFull.println("Chat is full, please try again later.");
+                    client.close();
+                }
              }
 
          } catch (IOException e) {
@@ -48,7 +56,7 @@ public class Server implements Runnable {
 
     public void broadcast(String message, ConnectionHandler sender){
         for (ConnectionHandler ch : connections){
-            if (ch != null&& ch!= sender) {
+            if (ch != null && ch!= sender) {
                 ch.out.println(message);
             }
         }
@@ -74,6 +82,7 @@ public class Server implements Runnable {
         private BufferedReader in;
         private PrintWriter out;
         private String name;
+        private boolean chatStarted = false;
 
         public ConnectionHandler(Socket client){
             this.client = client;
@@ -106,6 +115,26 @@ public class Server implements Runnable {
                out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
                 broadcast(name + " joined the room", this);
                 
+                 if (connections.size() < MIN_PLAYERS) {
+                        out.println("Waiting for more players to join...");
+                    }
+
+                    while (connections.size() < MIN_PLAYERS) {
+                        // Wait for enough players to join
+                        synchronized (connections) {
+                            connections.wait(); // Wait until more players connect
+                        }
+                    }
+
+                    if (connections.size() <= MAX_PLAYERS) {
+                        synchronized (connections) {
+                            connections.notifyAll();  // Notify all waiting clients to start chatting
+                        }
+                        chatStarted = true;
+                        broadcast("The chat has started!", this);
+                    }
+                
+
                 String message;
                 while ((message = in.readLine()) !=null){
                    if(message.startsWith("bye")) {
@@ -125,10 +154,13 @@ public class Server implements Runnable {
             try{
                 in.close();
                 out.close();
-                clientNames.remove(name); //removes client from the Arraylist when he quits, do i have to write name.ch or smth or is that enough
+                synchronized (connections) {
+                    clientNames.remove(name);
+                    connections.remove(this);
+                } //removes client from the Arraylist when he quits, do i have to write name.ch or smth or is that enough
             if (!client.isClosed()){
                 client.close();
-                }
+                } connections.notifyAll(); // Notify waiting threads if players disconnect
             }catch(IOException e){
 
             }
