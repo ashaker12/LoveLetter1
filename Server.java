@@ -6,7 +6,6 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,7 +16,7 @@ public class Server implements Runnable {
     private boolean done;
     private PrintWriter out;
     private ExecutorService threadpool; //so we dont need a new thread everytime (reuses)
-    private static List<String> clientNames = new ArrayList<>(); //List with all names already in use 
+    private ArrayList<String> clientNames = new ArrayList<>(); //List with all names already in use 
 
     public Server(){
         connections = new ArrayList<>();
@@ -40,17 +39,17 @@ public class Server implements Runnable {
          } catch (IOException e) {
             quit();
          }   
-
+ 
     }
     
     public void sendMessage(String message) {
             out.println(message);
         }
 
-    public void broadcast(String message){
+    public void broadcast(String message, ConnectionHandler sender){
         for (ConnectionHandler ch : connections){
-            if (ch!= null){
-                sendMessage(message);
+            if (ch != null&& ch!= sender) {
+                ch.out.println(message);
             }
         }
     }
@@ -105,17 +104,17 @@ public class Server implements Runnable {
                 }
 
                out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
-                broadcast(name + " joined the room");
+                broadcast(name + " joined the room", this);
                 
                 String message;
                 while ((message = in.readLine()) !=null){
                    if(message.startsWith("bye")) {
-                    broadcast(name + " left the Chat!");
+                    broadcast(name + " left the Chat!", this);
                     quit();
                    } else if (message.startsWith("/dm")) {
                     handleDirectMessage(message);  // Handle direct message
                     }else{
-                    broadcast(name + ": " + message);
+                    broadcast(name + ": " + message, this);
                    }
                 }
             } catch (Exception e) {
@@ -141,8 +140,8 @@ public class Server implements Runnable {
         out.println("Invalid DM format. /dm name message");
         return;
     }
-    String recipientName = splitMessage[2];
-    String dmMessage = splitMessage[3];
+    String recipientName = splitMessage[1];
+    String dmMessage = splitMessage[2];
     boolean recipientFound = false;
 
     for (ConnectionHandler ch : connections) {
