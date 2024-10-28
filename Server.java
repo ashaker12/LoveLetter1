@@ -19,6 +19,7 @@ public class Server implements Runnable {
     private ArrayList<String> clientNames = new ArrayList<>(); //List with all names already in use 
     private final int MIN_PLAYERS = 2;
     private final int MAX_PLAYERS = 4;
+    private boolean chatStarted = false;  // to indicate if the chat has started
 
     public Server(){
         connections = new ArrayList<>();
@@ -33,12 +34,15 @@ public class Server implements Runnable {
 
              while(!done){
                 Socket client = server.accept();
-                if (connections.size() < MAX_PLAYERS) {
+                if (connections.size() < MAX_PLAYERS && !chatStarted) {
                 ConnectionHandler handler = new ConnectionHandler(client);
                 connections.add(handler);
                 threadpool.execute(handler);
                 } else {
                     PrintWriter ChatFull = new PrintWriter(client.getOutputStream(), true);
+                    if (chatStarted){
+                        ChatFull.println("Chat has already Started!");
+                    }
                     ChatFull.println("Chat is full, please try again later.");
                     client.close();
                 }
@@ -50,8 +54,8 @@ public class Server implements Runnable {
  
     }
     
-    public void sendMessage(String message) {
-            out.println(message);
+    public void sendMessage(String message, ConnectionHandler receiver) {
+            receiver.out.println(message);
         }
 
     public void broadcast(String message, ConnectionHandler sender){
@@ -115,7 +119,7 @@ public class Server implements Runnable {
                out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
                 broadcast(name + " joined the room", this);
                 
-                 if (connections.size() < MIN_PLAYERS) {
+                 if (connections.size() < MIN_PLAYERS && !chatStarted) {
                         out.println("Waiting for more players to join...");
                     }
 
@@ -128,12 +132,20 @@ public class Server implements Runnable {
 
                     if (connections.size() <= MAX_PLAYERS) {
                         synchronized (connections) {
+                            out.println("You can type 'Start' to begin the chat.");
                             connections.notifyAll();  // Notify all waiting clients to start chatting
                         }
+                    String startMessage = in.readLine();
+                    if (startMessage != null && startMessage.equalsIgnoreCase("Start")) {
+                        synchronized(connections){
                         chatStarted = true;
                         broadcast("The chat has started!", this);
+                        connections.notifyAll();
+                        }
+                    }else{
+                        out.println("You cannot start the chat yet. Please wait for more players or type 'Start'.");
                     }
-                
+                }
 
                 String message;
                 while ((message = in.readLine()) !=null){
@@ -166,6 +178,15 @@ public class Server implements Runnable {
             }
     }
 
+    public ConnectionHandler connectionByName( String name){
+            for (ConnectionHandler ch : connections) {
+        if (ch != null && ch.name.equals(name)) {
+            return ch;  // Return the matching ConnectionHandler
+        }
+    }
+    return null;
+    }
+
     public void handleDirectMessage(String message) {
             String[] splitMessage = message.split(" ", 3);
              if (splitMessage.length < 3) {
@@ -185,7 +206,10 @@ public class Server implements Runnable {
         }
     if (!recipientFound) {
         out.println("User " + recipientName + " not found.");
-    }
+    }else{
+        ConnectionHandler dmName = connectionByName(recipientName);
+        sendMessage(message, dmName);
+    }//converted the String name to CH so server can search for it and send a message using sendMessage function
 
  }
     }
