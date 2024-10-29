@@ -26,33 +26,36 @@ public class Server implements Runnable {
         done = false;
     }
 
-    @Override
-    public void run(){
-         try {
-             server = new ServerSocket(9999);
-             threadpool = Executors.newCachedThreadPool(); //creates as many threads as possible 
+@Override
+public void run() {
+    try {
+        server = new ServerSocket(9999);
+        threadpool = Executors.newCachedThreadPool(); // Creates as many threads as needed
 
-             while(!done){
-                Socket client = server.accept();
-                if (connections.size() < MAX_PLAYERS && !chatStarted) {
-                ConnectionHandler handler = new ConnectionHandler(client);
-                connections.add(handler);
-                threadpool.execute(handler);
-                } else {
-                    PrintWriter ChatFull = new PrintWriter(client.getOutputStream(), true);
-                    if (chatStarted){
-                        ChatFull.println("Chat has already Started!");
-                    }
-                    ChatFull.println("Chat is full, please try again later.");
-                    client.close();
-                }
-             }
+        while (!done) {
+            Socket client = server.accept();
 
-         } catch (IOException e) {
-            quit();
-         }   
- 
+            // If the maximum number of players is reached, notify the client and close the connection
+            if (connections.size() >= MAX_PLAYERS) {
+                PrintWriter out = new PrintWriter(client.getOutputStream(), true);
+                out.println("Chat is full, please try again later.");
+                client.close();
+                continue;
+            }
+
+            // Accept the new connection and add it to the chat
+            ConnectionHandler handler = new ConnectionHandler(client);
+            connections.add(handler);
+            threadpool.execute(handler);
+        }
+
+    } catch (IOException e) {
+        quit();
     }
+}
+
+
+
     
     public void sendMessage(String message, ConnectionHandler receiver) {
             receiver.out.println(message);
@@ -119,7 +122,9 @@ public class Server implements Runnable {
                out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
                 broadcast(name + " joined the room", this);
                 
-                 if (connections.size() < MIN_PLAYERS && !chatStarted) {
+                if (Server.this.chatStarted){
+                    out.println("Chat already Started!");
+                }else if (connections.size() < MIN_PLAYERS && !chatStarted) {
                         out.println("Waiting for more players to join...");
                     }
 
@@ -130,20 +135,22 @@ public class Server implements Runnable {
                         }
                     }
 
-                    if (connections.size() <= MAX_PLAYERS) {
-                        synchronized (connections) {
+                    synchronized (connections) {
+                        if (!Server.this.chatStarted && connections.size() >= MIN_PLAYERS) {
                             out.println("You can type 'Start' to begin the chat.");
-                            connections.notifyAll();  // Notify all waiting clients to start chatting
+                        } 
+                    }
+
+                    if (!Server.this.chatStarted) {
+                        String startMessage = in.readLine();
+                        if (startMessage != null && startMessage.equalsIgnoreCase("Start")) {
+                            synchronized (connections) {
+                        if (!Server.this.chatStarted) {  // Double-check to ensure it's not started by another user
+                            Server.this.chatStarted = true;
+                            broadcast("The chat has started!", this);
+                            connections.notifyAll();
+                            }
                         }
-                    String startMessage = in.readLine();
-                    if (startMessage != null && startMessage.equalsIgnoreCase("Start")) {
-                        synchronized(connections){
-                        chatStarted = true;
-                        broadcast("The chat has started!", this);
-                        connections.notifyAll();
-                        }
-                    }else{
-                        out.println("You cannot start the chat yet. Please wait for more players or type 'Start'.");
                     }
                 }
 
@@ -192,24 +199,26 @@ public class Server implements Runnable {
              if (splitMessage.length < 3) {
         out.println("Invalid DM format. /dm name message");
         return;
-    }
-    String recipientName = splitMessage[1];
+        }
+    String recipientNameString = splitMessage[1];
     String dmMessage = splitMessage[2];
     boolean recipientFound = false;
+    ConnectionHandler recipientHandler = connectionByName(recipientNameString);
 
-    for (ConnectionHandler ch : connections) {
+    /*for (ConnectionHandler ch : connections) {
         if(ch != null && ch.name.equals(recipientName)){
              ch.out.println("[DM from " + name + "]: " + dmMessage);
              recipientFound = true;
             break;
         }
-        }
-    if (!recipientFound) {
-        out.println("User " + recipientName + " not found.");
+        }*/
+    if (recipientHandler!=null){
+        recipientHandler.out.println("[DM from " + name + "]: " + dmMessage);
+    }else if (!recipientFound) {
+        out.println("User " + recipientNameString + " not found.");
     }else{
-        ConnectionHandler dmName = connectionByName(recipientName);
-        sendMessage(message, dmName);
-    }//converted the String name to CH so server can search for it and send a message using sendMessage function
+        out.println("Error sending message. Try again");
+    } //converted the String name to CH so server can search for it and send a message using sendMessage function
 
  }
     }
