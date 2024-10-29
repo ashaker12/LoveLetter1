@@ -2,12 +2,12 @@
 import java.util.List;
 
 public class Game{
-    private List<Players> Player;
+    private List<Player> players;
     private Deck deck;
     private int currentPlayerIndex;
     private boolean gameStarted;
 
-    public game(){
+    public Game(){
         this.players = new ArrayList<>();
         this.Deck = new Deck();
         this.currentPlayerIndex = 0;
@@ -15,10 +15,18 @@ public class Game{
     }
 
     public void startGame() {
-        
+        gameStarted = true;
+        deck.shuffle();
+        for (Player player : players){
+            player.drawCard(deck);
+        }
     }
 
-    public Deck getDeck() {
-        return deck;
+    public Player getCurrentPlayer(){
+        return players.get(currentPlayerIndex);
+    }
+
+    public void nextTurn() {
+        currentPlayerIndex = currentPlayerIndex + 1;
     }
 }
