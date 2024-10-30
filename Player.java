@@ -46,4 +46,8 @@ public class Player{
         }
         return handDetails.toString();
     }
+
+    void setProtected(boolean b) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

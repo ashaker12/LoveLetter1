@@ -20,6 +20,7 @@ public class Server implements Runnable {
     private final int MIN_PLAYERS = 2;
     private final int MAX_PLAYERS = 4;
     private boolean chatStarted = false;  // to indicate if the chat has started
+    private Game game = new Game();
 
     public Server(){
         connections = new ArrayList<>();
@@ -35,7 +36,7 @@ public void run() {
         while (!done) {
             Socket client = server.accept();
 
-            // If the maximum number of players is reached, notify the client and close the connection
+            // If the maximum number of players is reached, notify client and close the connection
             if (connections.size() >= MAX_PLAYERS) {
                 PrintWriter out = new PrintWriter(client.getOutputStream(), true);
                 out.println("Chat is full, please try again later.");
@@ -52,11 +53,9 @@ public void run() {
     } catch (IOException e) {
         quit();
     }
+    
 }
 
-
-
-    
     public void sendMessage(String message, ConnectionHandler receiver) {
             receiver.out.println(message);
         }
@@ -90,6 +89,7 @@ public void run() {
         private PrintWriter out;
         private String name;
         private boolean chatStarted = false;
+        private Player player;
 
         public ConnectionHandler(Socket client){
             this.client = client;
@@ -117,6 +117,8 @@ public void run() {
                                 clientNames.add(name);
                                 break; // Add the name to the list of client names
                                 }
+                                player = new Player(name);
+                                game.addPlayer(player);
                 }
 
                out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
@@ -161,7 +163,11 @@ public void run() {
                     quit();
                    } else if (message.startsWith("/dm")) {
                     handleDirectMessage(message);  // Handle direct message
-                    }else{
+                    } else if (message.startsWith("/draw")) {
+                        handleDrawCommand();
+                    } else if (message.startsWith("/play")){
+                        handlePlayCommand(message);
+                    }else {
                     broadcast(name + ": " + message, this);
                    }
                 }
@@ -221,6 +227,28 @@ public void run() {
     } //converted the String name to CH so server can search for it and send a message using sendMessage function
 
  }
+
+        private void handleDrawCommand() {
+            player.drawCard(game.getDeck());
+            out.println(" you drew a card. ");
+            broadcast(player.getName() + "drew a card.", this);
+        }
+
+        private void handlePlayCommand(String message) {
+            String[] parts = message.split(" ");
+            int cardInd = Integer.parseInt(parts[1]);
+            Player target = game.getCurrentPlayer();
+            Card playedCard = player.playCard(cardInd);        
+        try{
+            if (playedCard != null) {
+                    broadcast(player.getName() + " played " + playedCard.getName(),this);
+                    game.nextTurn();
+                    broadcast("It's now " + game.getCurrentPlayer().getName() + "'s turn.",this);
+                }
+            } catch (NumberFormatException e) {
+                out.println("Invalid card index.");
+            }
+        }
     }
 
 public static void main(String[] args){
