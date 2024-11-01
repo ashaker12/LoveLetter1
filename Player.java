@@ -5,10 +5,12 @@ import java.util.List;
 public class Player{
     private String name;
     private List<Card> hand;
+    private boolean isProtected;
 
     public Player(String name){
         this.name = name;
         this.hand = new ArrayList<>();
+        this.isProtected = false; 
     }
 
     public String getName(){
@@ -47,7 +49,11 @@ public class Player{
         return handDetails.toString();
     }
 
-    void setProtected(boolean b) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    void setProtected(boolean isProtected) {
+        this.isProtected = isProtected;
+    }
+
+    public boolean isProtected(){
+        return isProtected();
     }
 }

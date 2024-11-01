@@ -146,6 +146,7 @@ public void run() {
                     if (!Server.this.chatStarted) {
                         String startMessage = in.readLine();
                         if (startMessage != null && startMessage.equalsIgnoreCase("Start")) {
+                            startGame();
                             synchronized (connections) {
                         if (!Server.this.chatStarted) {  // Double-check to ensure it's not started by another user
                             Server.this.chatStarted = true;
@@ -182,10 +183,11 @@ public void run() {
                 synchronized (connections) {
                     clientNames.remove(name);
                     connections.remove(this);
+                    connections.notifyAll(); // Notify waiting threads if players disconnect
                 } //removes client from the Arraylist when he quits, do i have to write name.ch or smth or is that enough
             if (!client.isClosed()){
                 client.close();
-                } connections.notifyAll(); // Notify waiting threads if players disconnect
+                } 
             }catch(IOException e){
 
             }
@@ -235,12 +237,11 @@ public void run() {
         }
 
         private void handlePlayCommand(String message) {
-            String[] parts = message.split(" ");
-            int cardInd = Integer.parseInt(parts[1]);
-            Player target = game.getCurrentPlayer();
-            Card playedCard = player.playCard(cardInd);        
-        try{
-            if (playedCard != null) {
+            try{
+                String[] parts = message.split(" ");
+                int cardInd = Integer.parseInt(parts[1]);
+                Card playedCard = player.playCard(cardInd);        
+                if (playedCard != null) {
                     broadcast(player.getName() + " played " + playedCard.getName(),this);
                     game.nextTurn();
                     broadcast("It's now " + game.getCurrentPlayer().getName() + "'s turn.",this);
@@ -248,6 +249,13 @@ public void run() {
             } catch (NumberFormatException e) {
                 out.println("Invalid card index.");
             }
+        }
+
+        private void startGame() {
+            game.startGame();
+            broadcast("the game has started!", this);
+            broadcast("It's "+ game.getCurrentPlayer().getName() + "'s turn.", this);
+
         }
     }
 

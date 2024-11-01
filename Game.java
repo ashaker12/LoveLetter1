@@ -80,4 +80,8 @@ public class Game{
         return deck;
     }
 
+    public boolean isGameStarted(){
+        return gameStarted;
+    }
+
 }
