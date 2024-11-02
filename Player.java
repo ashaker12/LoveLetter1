@@ -29,7 +29,7 @@ public class Player{
     }
 
     public Card playCard(int Index){
-        if (Index >= 0 && Index <= hand.size()){
+        if (Index >= 0 && Index < hand.size()){
             return hand.remove(Index);
         }else {
             System.out.println("invalid Index");
@@ -54,6 +54,6 @@ public class Player{
     }
 
     public boolean isProtected(){
-        return isProtected();
+        return this.isProtected;
     }
 }

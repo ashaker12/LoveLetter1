@@ -111,7 +111,7 @@ public void run() {
 
                  if (name == null || name.isEmpty()) {
                             out.println("Invalid name. Please choose another.");
-                        } if (clientNames.contains(name)) {
+                        } else if (clientNames.contains(name)) {
                             out.println("Name already in use. Please choose another.");
                              } else {
                                 clientNames.add(name);
@@ -124,7 +124,7 @@ public void run() {
                out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
                 broadcast(name + " joined the room", this);
                 
-                if (Server.this.chatStarted){
+                if (chatStarted){
                     out.println("Chat already Started!");
                 }else if (connections.size() < MIN_PLAYERS && !chatStarted) {
                         out.println("Waiting for more players to join...");
@@ -141,7 +141,6 @@ public void run() {
                         if (!Server.this.chatStarted && connections.size() >= MIN_PLAYERS) {
                             out.println("You can type 'Start' to begin the chat.");
                         } 
-                    }
 
                     if (!Server.this.chatStarted) {
                         String startMessage = in.readLine();
@@ -156,6 +155,7 @@ public void run() {
                         }
                     }
                 }
+            }
 
                 String message;
                 while ((message = in.readLine()) !=null){
@@ -166,6 +166,7 @@ public void run() {
                     handleDirectMessage(message);  // Handle direct message
                     } else if (message.startsWith("/draw")) {
                         handleDrawCommand();
+                        out.println("you are drawing a card!");
                     } else if (message.startsWith("/play")){
                         handlePlayCommand(message);
                     }else {
@@ -230,11 +231,11 @@ public void run() {
 
  }
 
-        private void handleDrawCommand() {
-            player.drawCard(game.getDeck());
-            out.println(" you drew a card. ");
-            broadcast(player.getName() + "drew a card.", this);
-        }
+    private void handleDrawCommand() {
+        player.drawCard(game.getDeck());
+        out.println(" you drew a card. ");
+        broadcast(player.getName() + "drew a card.", this);
+    }
 
         private void handlePlayCommand(String message) {
             try{
