@@ -36,7 +36,6 @@ public void run() {
         while (!done) {
             Socket client = server.accept();
 
-            // If the maximum number of players is reached, notify client and close the connection
             if (connections.size() >= MAX_PLAYERS) {
                 PrintWriter out = new PrintWriter(client.getOutputStream(), true);
                 out.println("Chat is full, please try again later.");
@@ -44,7 +43,7 @@ public void run() {
                 continue;
             }
 
-            // Accept the new connection and add it to the chat
+            //Accept the new connection and add it to the chat
             ConnectionHandler handler = new ConnectionHandler(client);
             connections.add(handler);
             threadpool.execute(handler);
@@ -55,6 +54,19 @@ public void run() {
     }
     
 }
+    private void endRound(Player roundWinner) {
+        game.determineRoundWinner(roundWinner);
+        broadcast(roundWinner.getName() + " has won this round and earned a Token of Affection!", null);
+
+        // Check if the game is over based on tokens collected
+        if (!game.isGameStarted()) {
+            broadcast("Game Over! " + roundWinner.getName() + " is the overall winner!", null);
+            quit(); // End the game
+        } else {
+            game.startGame(); 
+            broadcast("A new round has started! It's " + game.getCurrentPlayer().getName() + "'s turn.", null);
+        }
+    }
 
     public void sendMessage(String message, ConnectionHandler receiver) {
             receiver.out.println(message);
@@ -121,7 +133,7 @@ public void run() {
                                 game.addPlayer(player);
                 }
 
-               out.println("Welcome " + name + "!"); //in order to send a message that he connected to server we need an ArrayList
+               out.println("Welcome " + name + "!"); 
                 broadcast(name + " joined the room", this);
                 
                 if (chatStarted){
@@ -131,31 +143,32 @@ public void run() {
                     }
 
                     while (connections.size() < MIN_PLAYERS) {
-                        // Wait for enough players to join
+                        
                         synchronized (connections) {
-                            connections.wait(); // Wait until more players connect
+                            connections.wait(); 
                         }
                     }
 
                     synchronized (connections) {
                         if (!Server.this.chatStarted && connections.size() >= MIN_PLAYERS) {
+                            broadcast("You can type 'Start' to begin the chat.", this);
                             out.println("You can type 'Start' to begin the chat.");
                         } 
+                    }
 
-                    if (!Server.this.chatStarted) {
                         String startMessage = in.readLine();
-                        if (startMessage != null && startMessage.equalsIgnoreCase("Start")) {
-                            startGame();
+                            if (startMessage != null && startMessage.equalsIgnoreCase("Start")) {
                             synchronized (connections) {
-                        if (!Server.this.chatStarted) {  // Double-check to ensure it's not started by another user
-                            Server.this.chatStarted = true;
+                                startGame();
+                                Server.this.chatStarted = true;
+                            }
+                            
+                            if (!Server.this.chatStarted) {  //to ensure it's not started by another user
                             broadcast("The chat has started!", this);
                             connections.notifyAll();
                             }
+                        
                         }
-                    }
-                }
-            }
 
                 String message;
                 while ((message = in.readLine()) !=null){
@@ -163,20 +176,24 @@ public void run() {
                     broadcast(name + " left the Chat!", this);
                     quit();
                    } else if (message.startsWith("/dm")) {
-                    handleDirectMessage(message);  // Handle direct message
+                    handleDirectMessage(message);  
                     } else if (message.startsWith("/draw")) {
                         handleDrawCommand();
-                        out.println("you are drawing a card!");
+                        //out.println("you are drawing a card!");
                     } else if (message.startsWith("/play")){
                         handlePlayCommand(message);
                     }else {
                     broadcast(name + ": " + message, this);
                    }
                 }
+
             } catch (Exception e) {
                     quit();
             }
         }
+
+
+
         public void quit(){
             try{
                 in.close();
@@ -184,8 +201,8 @@ public void run() {
                 synchronized (connections) {
                     clientNames.remove(name);
                     connections.remove(this);
-                    connections.notifyAll(); // Notify waiting threads if players disconnect
-                } //removes client from the Arraylist when he quits, do i have to write name.ch or smth or is that enough
+                    connections.notifyAll(); 
+                } 
             if (!client.isClosed()){
                 client.close();
                 } 
@@ -230,34 +247,175 @@ public void run() {
     } //converted the String name to CH so server can search for it and send a message using sendMessage function
 
  }
-
     private void handleDrawCommand() {
-        player.drawCard(game.getDeck());
-        out.println(" you drew a card. ");
-        broadcast(player.getName() + "drew a card.", this);
+    if (game.getCurrentPlayer() != player) {
+        out.println("It's not your turn! Please wait for your turn to draw.");
+        return;
     }
 
-        private void handlePlayCommand(String message) {
-            try{
-                String[] parts = message.split(" ");
-                int cardInd = Integer.parseInt(parts[1]);
-                Card playedCard = player.playCard(cardInd);        
-                if (playedCard != null) {
-                    broadcast(player.getName() + " played " + playedCard.getName(),this);
-                    game.nextTurn();
-                    broadcast("It's now " + game.getCurrentPlayer().getName() + "'s turn.",this);
-                }
-            } catch (NumberFormatException e) {
-                out.println("Invalid card index.");
+    player.drawCard(game.getDeck());
+    out.println("You drew a: " + player.showHand());
+    broadcast(player.getName() + " drew a card.", this);
+    broadcast("It's now " + game.getCurrentPlayer().getName() + "'s turn.", null);
+}
+
+    private void handlePlayCommand(String message) {
+    if (game.getCurrentPlayer() != player) {
+        out.println("It's not your turn! Please wait for your turn to play.");
+        return;
+    }
+
+    try {
+        String[] parts = message.split(" ");
+        int cardInd = Integer.parseInt(parts[1]); // Index of the card to play
+        Card playedCard = player.playCard(cardInd);    
+
+        if (playedCard != null) {
+            broadcast(player.getName() + " played " + playedCard.getName(), this);
+
+            Player targetPlayer = null;
+            String guessedCard = "";
+
+            switch (playedCard.getName()) {
+                case "Guard":
+                    out.println("Choose a player to target with Guard effect:");
+                    String guardTargetName = in.readLine();
+                    targetPlayer = game.getPlayerByName(guardTargetName);
+                    out.println("Guess a card (1.Guard 2.Priest 3.Baron 4.Handmaid 5.Prince 6.King 7.Countess 8.Princess):");
+                    guessedCard = in.readLine();
+                    break;
+
+                case "Prince":
+                    out.println("Choose a player to target with Prince effect:");
+                    String princeTargetName = in.readLine();
+                    targetPlayer = game.getPlayerByName(princeTargetName);
+                    break;
+
+                case "King":
+                    out.println("Choose a player to target with King effect:");
+                    String kingTargetName = in.readLine();
+                    targetPlayer = game.getPlayerByName(kingTargetName);
+                    break;
+
+                case "Priest":
+                    out.println("Choose a player to target with Priest effect:");
+                    String priestTargetName = in.readLine();
+                    targetPlayer = game.getPlayerByName(priestTargetName);
+                    break;
+
+                case "Baron":
+                    out.println("Choose a player to target with Baron effect:");
+                    String baronTargetName = in.readLine();
+                    targetPlayer = game.getPlayerByName(baronTargetName);
+                    break;
+
+                case "Handmaid":
+                case "Countess":
+                case "Princess":
+                    break;
+            }
+
+            playedCard.applyEffect(game, Server.this, game.getCurrentPlayer(), targetPlayer, guessedCard);
+
+            if (game.isRoundOver()) {
+                Player roundWinner = game.getCurrentPlayer(); 
+                endRound(roundWinner); // End the round and award tokens
+            } else {
+                game.nextTurn();
+                broadcast("It's now " + game.getCurrentPlayer().getName() + "'s turn.", null);
             }
         }
+    } catch (NumberFormatException e) {
+        out.println("Invalid card index.");
+    } catch (IOException e) {
+        out.println("Error processing additional input.");
+    }
+}
 
         private void startGame() {
             game.startGame();
-            broadcast("the game has started!", this);
-            broadcast("It's "+ game.getCurrentPlayer().getName() + "'s turn.", this);
+            System.out.println("The game has started!");
+            System.out.println("It's "+ game.getCurrentPlayer().getName() + "'s turn.");
 
         }
+    public void guardEffect(Game game, Player currentPlayer, Player targetPlayer, String guessedCard) {
+        if (targetPlayer == null || targetPlayer.isProtected()){
+            System.out.println("Player is protected or invalid");
+            return;
+        }
+
+        Card targetCard = targetPlayer.getHand().get(0);
+        if(targetCard.getName().equalsIgnoreCase(guessedCard)){
+            System.out.println("Your Guess is correct!" + targetPlayer + "is eliminated");
+            game.removePlayer(targetPlayer);
+        } else {
+            System.out.println("Wrong Guess!");
+        }
+    }
+
+    public void priestEffect(Player targetPlayer) {
+        if (targetPlayer == null || targetPlayer.isProtected()){
+            System.out.println("Player is Protected!");
+            return;
+        }else {
+            System.out.println(targetPlayer + "'s Hand :" + targetPlayer.getHand().get(0));
+        }
+
+    }
+
+    public void baronEffect(Game game, Player currentPlayer, Player targetPlayer) {
+        if(targetPlayer == null || targetPlayer.isProtected()){
+            System.out.println("Player is Protected!");
+            return;
+        }
+
+        Card currentPlayersCard = currentPlayer.getHand().get(0);
+        Card targetPlayersCard  = targetPlayer.getHand().get(0);
+
+        if(currentPlayersCard.getValue() > targetPlayersCard.getValue()){
+            System.out.println(targetPlayer + "lost!");
+            game.removePlayer(targetPlayer);
+        }else if(currentPlayersCard.getValue() < targetPlayersCard.getValue()){
+            System.out.println(currentPlayer + "lost!");
+            game.removePlayer(currentPlayer);
+        }else{
+            System.out.println("Tie!");
+        }
+    }
+
+    public void princeEffect(Game game, Player targetPlayer) {
+    if (targetPlayer == null || targetPlayer.isProtected()) {
+        System.out.println("Player is protected or invalid.");
+        return;
+    }
+
+    Card discardedCard = targetPlayer.getHand().remove(0);
+    System.out.println(targetPlayer.getName() + " discarded " + discardedCard.getName());
+
+    if (discardedCard.getName().equals("Princess")) {
+        System.out.println(targetPlayer.getName() + " is eliminated for discarding the Princess.");
+        game.removePlayer(targetPlayer);
+    } else {
+        targetPlayer.drawCard(game.getDeck());
+    }
+}
+
+
+    public void kingEffect(Player currentPlayer, Player targetPlayer) {
+        if(targetPlayer == null || targetPlayer.isProtected()){
+            System.out.println("Player is Protected!");
+            return;
+        }
+
+        Card currentPlCard = currentPlayer.getHand().get(0);
+        Card targetPlCard  = targetPlayer.getHand().get(0);
+
+        currentPlayer.getHand().add(targetPlCard);
+        targetPlayer.getHand().add(currentPlCard);
+
+        System.out.println(currentPlayer + "swapped hands with " + targetPlayer);
+    }
+
     }
 
 public static void main(String[] args){

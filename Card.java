@@ -1,138 +1,133 @@
-
-import java.util.logging.Handler;
-
-public class Card{
+public class Card {
     private String name;
     private int value;
     private String effect;
 
-    public Card(String name, int value, String effect){
+    public Card(String name, int value, String effect) {
         this.name = name;
         this.value = value;
-        this.effect =  effect;
+        this.effect = effect;
     }
 
-    public String getName(){
+    public String getName() {
         return name;
     }
 
-    public int getValue(){
+    public int getValue() {
         return value;
     }
 
-    public String effect(){
+    public String effect() {
         return effect;
     }
 
-    public String toString(){
+    public String toString() {
         return name + " " + value + " " + effect;
     }
 
-    public void applyEffect(Game game, Player currentPlayer, Player targetPlayer, String guessedCard) {
+    public void applyEffect(Game game, Server server, Player currentPlayer, Player targetPlayer, String guessedCard) {
         switch (name) {
             case "Guard":
-                guardEffect(game, currentPlayer, targetPlayer, guessedCard);
+                guardEffect(game, server, currentPlayer, targetPlayer, guessedCard);
                 break;
             case "Priest":
-                priestEffect(targetPlayer);
+                priestEffect(server, targetPlayer);
                 break;
             case "Baron":
-                baronEffect(game, currentPlayer, targetPlayer);
+                baronEffect(game, server, currentPlayer, targetPlayer);
                 break;
             case "Handmaid":
                 currentPlayer.setProtected(true);
-                System.out.println(currentPlayer + " is protected until the next turn.");
+                server.broadcast(currentPlayer.getName() + " is protected until the next turn.", null);
                 break;
             case "Prince":
-                princeEffect(game, targetPlayer);
+                princeEffect(game, server, targetPlayer);
                 break;
             case "King":
-                kingEffect(currentPlayer, targetPlayer);
+                kingEffect(server, currentPlayer, targetPlayer);
                 break;
             case "Countess":
-                System.out.println("Countess was discarded!");
+                server.broadcast("Countess was discarded without effect!", null);
                 break;
             case "Princess":
-                System.out.println(currentPlayer + "is eliminated");
+                server.broadcast(currentPlayer.getName() + " discarded the Princess and is eliminated!", null);
                 game.removePlayer(currentPlayer); 
                 break;
         }
     }
 
-    private void guardEffect(Game game, Player currentPlayer, Player targetPlayer, String guessedCard) {
-        if (targetPlayer == null || targetPlayer.isProtected()){
-            System.out.println("Player is protected or invalid");
+    private void guardEffect(Game game, Server server, Player currentPlayer, Player targetPlayer, String guessedCard) {
+        if (targetPlayer == null || targetPlayer.isProtected()) {
+            server.broadcast("Player is protected or invalid for Guard effect", null);
             return;
         }
 
         Card targetCard = targetPlayer.getHand().get(0);
-        if(targetCard.getName().equalsIgnoreCase(guessedCard)){
-            System.out.println("Your Guess is correct!" + targetPlayer + "is eliminated");
+        if (targetCard.getName().equalsIgnoreCase(guessedCard)) {
+            server.broadcast("Correct Guess! " + targetPlayer.getName() + " is eliminated.", null);
             game.removePlayer(targetPlayer);
         } else {
-            System.out.println("Wrong Guess!");
+            server.broadcast("Wrong Guess!", null);
         }
     }
 
-    private void priestEffect(Player targetPlayer) {
-        if (targetPlayer == null || targetPlayer.isProtected()){
-            System.out.println("Player is Protected!");
+    private void priestEffect(Server server, Player targetPlayer) {
+        if (targetPlayer == null || targetPlayer.isProtected()) {
+            server.broadcast("Player is protected, Priest effect has no effect.", null);
             return;
-        }else {
-            System.out.println(targetPlayer + "'s Hand :" + targetPlayer.getHand().get(0));
         }
-
+        server.broadcast(targetPlayer.getName() + "'s hand is: " + targetPlayer.showHand(), null);
     }
 
-    private void baronEffect(Game game, Player currentPlayer, Player targetPlayer) {
-        if(targetPlayer == null || targetPlayer.isProtected()){
-            System.out.println("Player is Protected!");
+    private void baronEffect(Game game, Server server, Player currentPlayer, Player targetPlayer) {
+        if (targetPlayer == null || targetPlayer.isProtected()) {
+            server.broadcast("Player is protected, Baron effect has no effect.", null);
             return;
         }
 
         Card currentPlayersCard = currentPlayer.getHand().get(0);
-        Card targetPlayersCard  = targetPlayer.getHand().get(0);
+        Card targetPlayersCard = targetPlayer.getHand().get(0);
 
-        if(currentPlayersCard.getValue() > targetPlayersCard.getValue()){
-            System.out.println(targetPlayer + "lost!");
+        if (currentPlayersCard.getValue() > targetPlayersCard.getValue()) {
+            server.broadcast(targetPlayer.getName() + " lost and is eliminated by Baron.", null);
             game.removePlayer(targetPlayer);
-        }else if(currentPlayersCard.getValue() < targetPlayersCard.getValue()){
-            System.out.println(currentPlayer + "lost!");
+        } else if (currentPlayersCard.getValue() < targetPlayersCard.getValue()) {
+            server.broadcast(currentPlayer.getName() + " lost and is eliminated by Baron.", null);
             game.removePlayer(currentPlayer);
-        }else{
-            System.out.println("Tie!");
+        } else {
+            server.broadcast("It's a tie! No one is eliminated.", null);
         }
     }
 
-    private void princeEffect(Game game, Player targetPlayer) {
-        if(targetPlayer == null || targetPlayer.isProtected()){
-            System.out.println("Player is Protected!");
+    private void princeEffect(Game game, Server server, Player targetPlayer) {
+        if (targetPlayer == null || targetPlayer.isProtected()) {
+            server.broadcast("Player is protected or invalid, Prince effect has no effect.", null);
             return;
         }
 
         Card discardedCard = targetPlayer.getHand().remove(0);
+        server.broadcast(targetPlayer.getName() + " discarded " + discardedCard.getName(), null);
 
-        if (discardedCard.getName().equals("Princess")){
-            System.out.println(targetPlayer + " is removed due to discarding the Princess.");
+        if (discardedCard.getName().equals("Princess")) {
+            server.broadcast(targetPlayer.getName() + " is eliminated for discarding the Princess.", null);
             game.removePlayer(targetPlayer);
-        }else { 
-            System.out.println(discardedCard + "was removed from: " + targetPlayer);
+        } else {
             targetPlayer.drawCard(game.getDeck());
         }
     }
 
-    private void kingEffect(Player currentPlayer, Player targetPlayer) {
-        if(targetPlayer == null || targetPlayer.isProtected()){
-            System.out.println("Player is Protected!");
+    private void kingEffect(Server server, Player currentPlayer, Player targetPlayer) {
+        if (targetPlayer == null || targetPlayer.isProtected()) {
+            server.broadcast("Player is protected or invalid, King effect has no effect.", null);
             return;
         }
 
         Card currentPlCard = currentPlayer.getHand().get(0);
-        Card targetPlCard  = targetPlayer.getHand().get(0);
+        Card targetPlCard = targetPlayer.getHand().get(0);
 
         currentPlayer.getHand().add(targetPlCard);
         targetPlayer.getHand().add(currentPlCard);
 
-        System.out.println(currentPlayer + "swapped hands with " + targetPlayer);
+        server.broadcast(currentPlayer.getName() + " swapped hands with " + targetPlayer.getName(), null);
     }
 }
