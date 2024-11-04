@@ -1,1 +1,28 @@
 Main-Class: Server
+
+ 1. start
+   - Beginnt das Spiel, nur wenn genügend Spieler verbunden sind.
+
+2. /draw
+   - Zieht eine Karte aus dem Deck und zeigt die gezogene Karte an.
+   - Am Anfang muss man zwei Karten ziehen.
+
+3. /play [Kartenindex]
+   - Spielt eine Karte aus der Hand des Spielers und aktiviert sein Effekt.
+   - Beispiel: /play 0 (spielt die Karte an Position `0` in der Hand)
+
+4. Zusätzliche Eingaben bei bestimmten Karten
+   - Einige Karten erfordern zusätzliche Eingaben:
+   Beispiel:
+      - Guard: Nach dem Ausspielen fragt der Server nach dem Namen des Spielers und der Karte
+         - Beispiel: 
+           1. `/play 0`
+           2. Dann gib fragt der Server nach den GegenerSpielernamen(targetPlayer)z.b `Ahmed`.
+           3. Dann gib fragt er nach der Nummer der vermuteten Karte z.b 1 --> Guard
+
+5. /dm [Spielername] [Nachricht]
+   - schickt eine private Nachricht an einen bestimmten Spieler.
+   - Beispiel: /dm Ahmed Hallo, wie geht’s?
+
+6. bye
+   - Verlässt das Spiel und beendet die Verbindung zum Server.
