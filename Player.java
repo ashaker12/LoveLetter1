@@ -6,21 +6,11 @@ public class Player{
     private String name;
     private List<Card> hand;
     private boolean isProtected;
-    private int tokensOfAffection;
 
     public Player(String name){
         this.name = name;
         this.hand = new ArrayList<>();
-        this.isProtected = false;
-        this.tokensOfAffection = 0; 
-    }
-
-    public void addToken(){
-        tokensOfAffection++;
-    }
-
-    public int getTokens(){
-        return tokensOfAffection;
+        this.isProtected = false; 
     }
 
     public String getName(){
@@ -31,12 +21,11 @@ public class Player{
         return hand;
     }
 
-    public Card drawCard(Deck deck){
+    public void drawCard(Deck deck){
         Card drawnCard = deck.draw();
         if (drawnCard != null){
             hand.add(drawnCard);
         }
-        return drawnCard;
     }
 
     public Card playCard(int Index){
@@ -48,11 +37,14 @@ public class Player{
         }
     }
 
-    public String showHand() {
+    public String showHand(){
         StringBuilder handDetails = new StringBuilder();
-        for (int i = 0; i < hand.size(); i++) {
+        for(int i =0; i < hand.size(); i++){
             Card card = hand.get(i);
-            handDetails.append(i).append(": ").append(card.toString()).append("\n");
+
+            handDetails.append(i);
+
+            handDetails.append(card.toString());
         }
         return handDetails.toString();
     }

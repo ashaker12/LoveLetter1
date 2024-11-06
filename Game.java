@@ -7,7 +7,6 @@ public class Game{
     private Deck deck;
     private int currentPlayerIndex;
     private boolean gameStarted;
-    private int tokensToWin;
 
     public Game(){
         this.players = new ArrayList<>();
@@ -16,13 +15,22 @@ public class Game{
         this.gameStarted = false;
     }
 
+    public boolean isRoundOver() {
+        return players.size() == 1;
+    }
+
+    public Player getPlayerByName(String name) {
+    for (Player player : players) {
+        if (player.getName().equalsIgnoreCase(name)) {
+            return player;
+        }
+    }
+    return null;
+}
+
     public void startGame() {
         gameStarted = true;
         deck.Shuffle();
-        int playerCount = players.size();
-        if (playerCount == 2) tokensToWin = 7;
-        else if (playerCount == 3) tokensToWin = 5;
-        else if (playerCount == 4) tokensToWin = 4;
 
         //card dealing
         for (Player player : players){
@@ -37,7 +45,7 @@ public class Game{
     }
 
     public void nextTurn() {
-        currentPlayerIndex = (currentPlayerIndex + 1 )% players.size();
+        currentPlayerIndex = currentPlayerIndex + 1;
         System.out.println("It's now " + getCurrentPlayer().getName() + "'s turn.");
     }
 
@@ -81,17 +89,6 @@ public class Game{
         }
     }
 
-    public void determineRoundWinner(Player winner) {
-        if (winner != null) {
-            winner.addToken();
-            System.out.println(winner.getName() + " won the round and now has " + winner.getTokens() + " tokens!");
-            if (winner.getTokens() >= tokensToWin) {
-                System.out.println(winner.getName() + " wins the game with " + winner.getTokens() + " tokens!");
-                gameStarted = false;
-            }
-        }
-    }
-
     public Deck getDeck(){
         return deck;
     }
@@ -99,22 +96,5 @@ public class Game{
     public boolean isGameStarted(){
         return gameStarted;
     }
-
-    public boolean isRoundOver() {
-        return players.size() == 1;
-    }
-
-    public Player getRoundWinner() {
-        return players.size() == 1 ? players.get(0) : null;
-    }
-
-    public Player getPlayerByName(String name) {
-    for (Player player : players) {
-        if (player.getName().equalsIgnoreCase(name)) {
-            return player;
-        }
-    }
-    return null;
-}
 
 }
